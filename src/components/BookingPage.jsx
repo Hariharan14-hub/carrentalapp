@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import bookingApi from '../api/bookingApi';
 import { getUserUsingEmail } from '../api/authApi';
 import vehicleApi from '../api/vehicleApi';
+import { Button } from 'react-bootstrap';
 
 const BookingPage = () => {
     const { id: vehicleId } = useParams();
     const email = localStorage.getItem('email');
-
+    const navigate = useNavigate();
     const [vehicle, setVehicle] = useState(null);
     const [userId, setUserId] = useState(null);
     const [startDate, setStartDate] = useState('');
@@ -32,9 +33,7 @@ const BookingPage = () => {
     const handleBooking = async () => {
         if (!startDate || !endDate) return alert('Select start and end dates!');
         if (!vehicle) return alert('Vehicle not loaded!');
-
         setLoading(true);
-
         try {
             const start = new Date(startDate);
             const end = new Date(endDate);
@@ -79,6 +78,11 @@ const BookingPage = () => {
     return (
         <div className="container mt-5">
             <h3>Booking Details</h3>
+            <div className="mb-3">
+                <Button variant="secondary" onClick={() => navigate('/vehicles')}>
+                    ← Back
+                </Button>
+            </div>
             {vehicle ? (
                 <div className="card p-4 shadow-sm">
                     <h5>{vehicle.brand} {vehicle.model}</h5>
@@ -90,6 +94,7 @@ const BookingPage = () => {
                             type="date"
                             className="form-control"
                             value={startDate}
+                            min={new Date().toISOString().split('T')[0]}
                             onChange={(e) => setStartDate(e.target.value)}
                         />
                     </div>
@@ -100,6 +105,7 @@ const BookingPage = () => {
                             type="date"
                             className="form-control"
                             value={endDate}
+                            min={startDate || new Date().toISOString().split('T')[0]}
                             onChange={(e) => setEndDate(e.target.value)}
                         />
                     </div>

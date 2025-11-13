@@ -8,10 +8,20 @@ const ForgotPasswordPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (error) setError('');
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const { newPassword } = formData;
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+    setError('');
     try {
       await forgotPassword(formData);
       setSuccess('Password updated successfully! Please login.');

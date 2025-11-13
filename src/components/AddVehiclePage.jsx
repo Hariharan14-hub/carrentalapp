@@ -128,14 +128,28 @@ const AddVehiclePage = () => {
 
   const handleVehicleSubmit = async (e) => {
     e.preventDefault();
+    const requiredFields = ['brand', 'model', 'year', 'rentPerDay', 'color', 'registrationNumber', 'transmissionType', 'fuelType'];
+    for (let field of requiredFields) {
+      if (!formData[field]) {
+        alert(`Please enter ${field}`);
+        return;
+      }
+    }
     if (!user?.userId) return alert('User not loaded yet');
     setLoading(true);
     try {
       if (updateVehicleId) {
-        await vehicleApi.updateVehicle({ ...formData, vehicleId: updateVehicleId });
+        const updateData = { ...formData, id: updateVehicleId };
+        delete updateData.vehicleId;
+        await vehicleApi.updateVehicle(updateData);
+        if (imageFile) {
+          const imgForm = new FormData();
+          imgForm.append('image', imageFile);
+          await vehicleApi.uploadImage(updateVehicleId, imgForm);
+        }
         alert('✅ Vehicle updated successfully!');
-        setUpdateVehicleId(null);
-      } else {
+      }
+      else {
         const response = await vehicleApi.addVehicle({ ...formData, userId: user.userId });
         const newVehicle = response.data;
         if (imageFile) {
@@ -145,7 +159,6 @@ const AddVehiclePage = () => {
         }
         alert('✅ Vehicle added successfully!');
       }
-
       setFormData({
         brand: '', model: '', year: '', rentPerDay: '', color: '',
         registrationNumber: '', transmissionType: '', fuelType: '', available: true,
@@ -185,7 +198,7 @@ const AddVehiclePage = () => {
     try {
       await bookingApi.deleteBooking(booking.bookingId);
       await vehicleApi.updateAvailability(booking.vehicle.vehicleId, true);
-      alert('Booking deleted and vehicle availability restored!');
+      alert('✅ Booking deleted successfully! You will receive your refund shortly.');
       fetchUserBookings(user.userId);
       fetchUserVehicles(user.userId);
     } catch (err) {
@@ -235,49 +248,71 @@ const AddVehiclePage = () => {
   const handleUpdateBooking = async () => {
     try {
       if (!selectedBooking) return;
-
       const startDateISO = new Date(updateStartDate).toISOString();
       const endDateISO = new Date(updateEndDate).toISOString();
-
       const oldEnd = new Date(selectedBooking.endDate);
       const newEnd = new Date(endDateISO);
-
       const oldEndDateOnly = new Date(oldEnd.getFullYear(), oldEnd.getMonth(), oldEnd.getDate());
       const newEndDateOnly = new Date(newEnd.getFullYear(), newEnd.getMonth(), newEnd.getDate());
-
       let extraDaysCalc = Math.floor((newEndDateOnly - oldEndDateOnly) / (1000 * 60 * 60 * 24));
-      extraDaysCalc = extraDaysCalc > 0 ? extraDaysCalc : 0;
-
       const rentPerDay = parseFloat(selectedBooking.vehicle.rentPerDay || 0);
-      const extraAmountCalc = extraDaysCalc * rentPerDay;
 
-      const updatedTotalDays = selectedBooking.totalDays + extraDaysCalc;
-      const updatedTotalAmount = selectedBooking.totalAmount + extraAmountCalc;
+      if (extraDaysCalc > 0) {
+        // ✅ User extended booking
+        const extraAmountCalc = extraDaysCalc * rentPerDay;
+        const updatedTotalDays = selectedBooking.totalDays + extraDaysCalc;
+        const updatedTotalAmount = selectedBooking.totalAmount + extraAmountCalc;
 
-      const updatedBooking = {
-        userId: selectedBooking.user.userId,
-        vehicleId: selectedBooking.vehicle.vehicleId,
-        startDate: startDateISO,
-        endDate: endDateISO,
-        totalDays: updatedTotalDays,
-        totalAmount: updatedTotalAmount,
-        status: selectedBooking.status,
-        paymentRequest: {
-          paymentMethod: 'stripe',
-          amount: updatedTotalAmount, // previous total + extra
-          currency: 'INR',
-          status: '',
-          description: `Booking updated: total ${updatedTotalDays} days`,
-          paymentGateway: 'stripe',
-        }
-      };
+        const updatedBooking = {
+          userId: selectedBooking.user.userId,
+          vehicleId: selectedBooking.vehicle.vehicleId,
+          startDate: startDateISO,
+          endDate: endDateISO,
+          totalDays: updatedTotalDays,
+          totalAmount: updatedTotalAmount,
+          status: selectedBooking.status,
+          paymentRequest: {
+            paymentMethod: 'stripe',
+            amount: updatedTotalAmount,
+            currency: 'INR',
+            description: `Booking updated: total ${updatedTotalDays} days`,
+            paymentGateway: 'stripe',
+          }
+        };
 
-      const res = await bookingApi.updateBooking(selectedBooking.bookingId, updatedBooking);
-
-      if (extraAmountCalc > 0) {
+        const res = await bookingApi.updateBooking(selectedBooking.bookingId, updatedBooking);
         window.location.href = res.data.paymentUrl;
+
+      } else if (extraDaysCalc < 0) {
+        const oldEndDateOnly = new Date(oldEnd.getFullYear(), oldEnd.getMonth(), oldEnd.getDate());
+        const newEndDateOnly = new Date(newEnd.getFullYear(), newEnd.getMonth(), newEnd.getDate());
+        let extraDaysCalc = Math.floor((oldEndDateOnly - newEndDateOnly) / (1000 * 60 * 60 * 24));
+        const rentPerDay = parseFloat(selectedBooking.vehicle.rentPerDay || 0);
+        const extraAmountCalc = extraDaysCalc * rentPerDay;
+        const updatedTotalDays = selectedBooking.totalDays - extraDaysCalc;
+        const updatedTotalAmount = selectedBooking.totalAmount - extraAmountCalc;
+
+        const reducedBooking = {
+          userId: selectedBooking.user.userId,
+          vehicleId: selectedBooking.vehicle.vehicleId,
+          startDate: startDateISO,
+          endDate: endDateISO,
+          totalDays: updatedTotalDays,
+          totalAmount: updatedTotalAmount,
+          status: selectedBooking.status,
+          paymentRequest: {
+            paymentMethod: 'stripe',
+            amount: updatedTotalAmount,
+            currency: 'INR',
+            description: 'Booking updated',
+            paymentGateway: 'stripe',
+          }
+        };
+        await bookingApi.updateAmountAndDate(selectedBooking.bookingId, reducedBooking);
+        alert(`Booking updated successfully! New amount: ₹${updatedTotalAmount}. Any remaining balance will be refunded shortly.`)
       } else {
-        alert('Booking updated successfully!');
+        // ✅ No change
+        alert('No extra or reduced days added.');
       }
 
       closeModal();
@@ -292,10 +327,10 @@ const AddVehiclePage = () => {
   return (
     <div className="container mt-4" style={{ maxWidth: '1000px' }}>
       <div className="mb-3">
-      <Button variant="secondary" onClick={() => navigate('/vehicles')}>
-        ← Back
-      </Button>
-    </div>
+        <Button variant="secondary" onClick={() => navigate('/vehicles')}>
+          ← Back
+        </Button>
+      </div>
       <h3 className="text-center mb-4">👤 User Profile & Vehicle Management</h3>
 
       {/* User Profile */}
@@ -404,11 +439,21 @@ const AddVehiclePage = () => {
           <Form>
             <Form.Group className="mb-3">
               <Form.Label>Start Date</Form.Label>
-              <Form.Control type="date" value={updateStartDate} onChange={e => setUpdateStartDate(e.target.value)} />
+              <Form.Control
+                type="date"
+                value={updateStartDate}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={e => setUpdateStartDate(e.target.value)}
+              />
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>End Date</Form.Label>
-              <Form.Control type="date" value={updateEndDate} onChange={e => setUpdateEndDate(e.target.value)} />
+              <Form.Control
+                type="date"
+                value={updateEndDate}
+                min={updateStartDate || new Date().toISOString().split('T')[0]}
+                onChange={e => setUpdateEndDate(e.target.value)}
+              />
             </Form.Group>
             {extraDays > 0 && (
               <p className="text-success">

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { login } from '../redux/authSlice';
+import { clearError, login } from '../redux/authSlice';
 import { Link, useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error } = useSelector((state) => state.auth);
@@ -17,6 +18,18 @@ const LoginPage = () => {
       alert('Please enter email and password');
       return;
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    if (password.length < 6) {
+      alert('Password must be at least 6 characters long');
+      return;
+    }
+
     dispatch(login({ email, password })).then((res) => {
       if (!res.error) {
         navigate('/vehicles');
