@@ -3,7 +3,7 @@ import api from './axiosInstance';
 const API_BASE = '/vehicle';
 
 const vehicleApi = {
-  getAllVehicles: () => api.get(`${API_BASE}/getAllVehicle`),
+  getAllVehicles: (id) => api.get(`${API_BASE}/getAllVehicle/${id}`),
   getImageById: (id) => api.get(`${API_BASE}/getImageById/${id}`, { responseType: 'blob' }),
   addVehicle: (vehicle) => api.post(`${API_BASE}/create`, vehicle),
   getVehicleByUserId: (userId) => api.get(`${API_BASE}/getVehicleByUserId/${userId}`),

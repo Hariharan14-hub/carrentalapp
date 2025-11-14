@@ -404,8 +404,8 @@ const AddVehiclePage = () => {
                 <h6 className="fw-bold">{v.brand} {v.model}</h6>
                 <p className="text-muted mb-1">{v.year} • {v.fuelType}</p>
                 <p className="fw-bold mb-2">₹{v.rentPerDay}/day</p>
-                <Button size="sm" className="me-2" onClick={() => handleEditVehicle(v)}>Edit</Button>
-                <Button size="sm" variant="danger" onClick={() => handleDeleteVehicle(v.vehicleId)}>Delete</Button>
+                <Button size="sm" className="me-2" onClick={() => handleEditVehicle(v)}>Update Vehicle</Button>
+                <Button size="sm" variant="danger" onClick={() => handleDeleteVehicle(v.vehicleId)}>Remove Vehicle</Button>
               </div>
             </div>
           </div>
@@ -422,8 +422,8 @@ const AddVehiclePage = () => {
               <p>Dates: {new Date(b.startDate).toLocaleDateString()} - {new Date(b.endDate).toLocaleDateString()}</p>
               <p>Total: ₹{b.totalAmount} ({b.totalDays} days)</p>
               <div className="d-flex gap-2 flex-wrap">
-                <Button size="sm" variant="primary" onClick={() => openBookingModal(b)}>Update</Button>
-                <Button size="sm" variant="danger" onClick={() => handleDeleteBooking(b)}>Delete</Button>
+                <Button size="sm" variant="primary" onClick={() => openBookingModal(b)}>Update Booking</Button>
+                <Button size="sm" variant="danger" onClick={() => handleDeleteBooking(b)}>Cancel Booking</Button>
               </div>
             </div>
           </div>
@@ -452,6 +452,13 @@ const AddVehiclePage = () => {
                 type="date"
                 value={updateEndDate}
                 min={updateStartDate || new Date().toISOString().split('T')[0]}
+                max={
+                  updateStartDate
+                    ? new Date(new Date(updateStartDate).getTime() + 30 * 24 * 60 * 60 * 1000) // +30 days
+                      .toISOString()
+                      .split('T')[0]
+                    : ''
+                }
                 onChange={e => setUpdateEndDate(e.target.value)}
               />
             </Form.Group>

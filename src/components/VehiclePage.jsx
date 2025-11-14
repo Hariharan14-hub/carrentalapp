@@ -5,13 +5,16 @@ import bookingApi from '../api/bookingApi';
 import { FaUserCircle } from 'react-icons/fa';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import { getUserUsingEmail } from '../api/authApi';
 
 const VehiclePage = () => {
   const [vehicles, setVehicles] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [message, setMessage] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+  const [user, setUser] = useState(null);
   const email = localStorage.getItem('email');
 
   // Check query params for Stripe redirect
@@ -49,13 +52,22 @@ const VehiclePage = () => {
     }
   };
 
+  const fetchUserData = async () => {
+    try {
+      const res = await getUserUsingEmail(email);
+      setUser(res.data);
+    } catch (err) {
+      console.error('Error fetching user:', err);
+    }
+  };
 
   // Fetch all available vehicles
   const fetchVehicles = async () => {
     try {
-      const response = await vehicleApi.getAllVehicles();
+      const res = await getUserUsingEmail(email);
+      setUser(res.data);
+      const response = await vehicleApi.getAllVehicles(res.data.userId);
       const vehicleList = response.data;
-
       const vehiclesWithImages = await Promise.all(
         vehicleList.map(async (v) => {
           try {
@@ -117,30 +129,53 @@ const VehiclePage = () => {
       {/* Vehicle List */}
       <div className="container mt-4">
         <h4 className="text-center mb-4">Available Vehicles</h4>
+        <div className="text-center mb-3">
+          <input
+            type="text"
+            placeholder="Search by brand or model"
+            className="form-control w-50 mx-auto d-inline-block"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ maxWidth: '300px' }}
+          />
+          {searchTerm && (
+            <button
+              className="btn btn-sm btn-outline-secondary ms-2"
+              onClick={() => setSearchTerm('')}
+            >
+              Clear
+            </button>
+          )}
+        </div>
         <div className="row">
           {vehicles.length === 0 ? (
             <p className="text-center text-muted">No vehicles available</p>
           ) : (
-            vehicles.map((v) => (
-              <div className="col-md-3 mb-4" key={v.vehicleId}>
-                <div className="card shadow-sm h-100 border-0" style={{ position: 'relative', zIndex: 1 }}>
-                  {v.image ? (
-                    <img src={v.image} className="card-img-top" alt={v.model} style={{ height: '180px', objectFit: 'cover' }} />
-                  ) : (
-                    <div className="bg-secondary text-white text-center py-5">No Image</div>
-                  )}
-                  <div className="card-body text-center">
-                    <h5 className="fw-bold">{v.brand}</h5>
-                    <p className="mb-1">{v.model}</p>
-                    <small className="text-muted">{v.year} • {v.fuelType}</small>
-                    <p className="fw-bold mt-2">₹{v.rentPerDay}/day</p>
-                    <button className="btn btn-sm btn-primary" onClick={() => handleBookNow(v.vehicleId)} disabled={!v.available}>
-                      {v.available ? 'Book Now' : 'Unavailable'}
-                    </button>
+            vehicles
+              .filter((v) =>
+                v.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                v.model.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .map((v) => (
+                <div className="col-md-3 mb-4" key={v.vehicleId}>
+                  <div className="card shadow-sm h-100 border-0" style={{ position: 'relative', zIndex: 1 }}>
+                    {v.image ? (
+                      <img src={v.image} className="card-img-top" alt={v.model} style={{ height: '180px', objectFit: 'cover' }} />
+                    ) : (
+                      <div className="bg-secondary text-white text-center py-5">No Image</div>
+                    )}
+                    <div className="card-body text-center">
+                      <h5 className="fw-bold">{v.brand}</h5>
+                      <p className="mb-1">{v.model}</p>
+                      <small className="text-muted">{v.year} • {v.fuelType}</small>
+                      <p className="fw-bold mt-2">₹{v.rentPerDay}/day</p>
+                      <button className="btn btn-sm btn-primary" onClick={() => handleBookNow(v.vehicleId)} disabled={!v.available}>
+                        {v.available ? 'Book Now' : 'Unavailable'}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              ))
           )}
         </div>
       </div>

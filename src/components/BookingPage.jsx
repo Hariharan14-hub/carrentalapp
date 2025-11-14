@@ -106,6 +106,13 @@ const BookingPage = () => {
                             className="form-control"
                             value={endDate}
                             min={startDate || new Date().toISOString().split('T')[0]}
+                            max={
+                                startDate
+                                    ? new Date(new Date(startDate).setDate(new Date(startDate).getDate() + 30))
+                                        .toISOString()
+                                        .split('T')[0]
+                                    : ''
+                            }
                             onChange={(e) => setEndDate(e.target.value)}
                         />
                     </div>
