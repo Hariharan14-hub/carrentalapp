@@ -9,8 +9,9 @@ const bookingApi = {
   updateStatus: (bookingId) => api.put(`${API_BASE}/updateStatus/${bookingId}`),
   getAllBookings: () => api.get(`${API_BASE}/getAllBookings`),
   getBookingById: (id) => api.get(`${API_BASE}/getBookingById/${id}`),
-  deleteBooking: (id) => api.delete(`${API_BASE}/deleteBooking/${id}`),
+  deleteBooking: (id,status) => api.delete(`${API_BASE}/deleteBooking/${id}/${status}`),
   getBookingsByUserId: (id) => api.get(`${API_BASE}/getBookingsByUserId/${id}`),
+  updateBookingAsCompleted: () => api.put(`${API_BASE}/updateBookingAsCompleted`),
 };
 
 export default bookingApi;

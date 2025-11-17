@@ -64,6 +64,7 @@ const VehiclePage = () => {
   // Fetch all available vehicles
   const fetchVehicles = async () => {
     try {
+      await bookingApi.updateBookingAsCompleted();
       const res = await getUserUsingEmail(email);
       setUser(res.data);
       const response = await vehicleApi.getAllVehicles(res.data.userId);

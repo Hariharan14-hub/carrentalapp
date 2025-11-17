@@ -93,7 +93,7 @@ const AddVehiclePage = () => {
       const res = await bookingApi.getBookingsByUserId(userId);
       setUserBookings(res.data);
     } catch (err) {
-      console.error('Error fetching bookings:', err);
+      console.error("Error fetching bookings:", err);
     }
   };
 
@@ -188,15 +188,20 @@ const AddVehiclePage = () => {
       fetchUserVehicles(user.userId);
     } catch (err) {
       console.error(err);
-      alert('Failed to delete vehicle.');
+      if (err.message.includes("Request failed with status code 500")) {
+        alert('❌ You cannot remove a vehicle while it has active bookings.');
+      } else {
+        alert('Failed to delete vehicle.');
+      }
+
     }
   };
-
+  
   // Booking handlers
   const handleDeleteBooking = async (booking) => {
     if (!window.confirm('Are you sure you want to delete this booking?')) return;
     try {
-      await bookingApi.deleteBooking(booking.bookingId);
+      await bookingApi.deleteBooking(booking.bookingId, "Cancelled");
       await vehicleApi.updateAvailability(booking.vehicle.vehicleId, true);
       alert('✅ Booking deleted successfully! You will receive your refund shortly.');
       fetchUserBookings(user.userId);
@@ -359,7 +364,7 @@ const AddVehiclePage = () => {
                 </div>
                 <div className="col-md-4">
                   <Form.Label>Password</Form.Label>
-                  <Form.Control type="password" name="password" value={user.password || ''} onChange={handleProfileChange} />
+                  <Form.Control type="password" name="password" value='' onChange={handleProfileChange} />
                 </div>
                 <div className="col-12 mt-2">
                   <Button className="me-2" onClick={handleProfileSave}>Save</Button>
@@ -422,8 +427,30 @@ const AddVehiclePage = () => {
               <p>Dates: {new Date(b.startDate).toLocaleDateString()} - {new Date(b.endDate).toLocaleDateString()}</p>
               <p>Total: ₹{b.totalAmount} ({b.totalDays} days)</p>
               <div className="d-flex gap-2 flex-wrap">
-                <Button size="sm" variant="primary" onClick={() => openBookingModal(b)}>Update Booking</Button>
-                <Button size="sm" variant="danger" onClick={() => handleDeleteBooking(b)}>Cancel Booking</Button>
+                {b.status === 'Cancelled' ? (
+                  <Button size="sm" variant="secondary" disabled>
+                    Cancelled
+                  </Button>
+                ) : b.status === 'Completed' ? (
+                  <Button size="sm" variant="success" disabled>
+                    Completed
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() => openBookingModal(b)}>
+                      Update Booking
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => handleDeleteBooking(b)}>
+                      Cancel Booking
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
